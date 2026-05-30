@@ -8,7 +8,6 @@ const UserDashboard = () => {
     const [darkMode, setDarkMode] = useState(false);
 
     // ==================== STATE MANAGEMENT DATA (CRUD) ====================
-    // Data Setoran Sampah Warga — load dari localStorage, fallback ke data default
     const defaultSetoran = [
         { id: 1, tanggal: '2026-05-18', jenis: 'Botol Plastik Bekas', berat: 45.2, pendapatan: 226000, provinsi: 'DKI JAKARTA', kabupaten: 'KOTA ADMINISTRASI JAKARTA SELATAN', kecamatan: 'CILANDAK', kelurahan: 'CILANDAK BARAT', rt: '03', rw: '02', status: 'Pending' },
         { id: 2, tanggal: '2026-05-14', jenis: 'Kardus Box Kemasan', berat: 120.0, pendapatan: 420000, provinsi: 'JAWA BARAT', kabupaten: 'KABUPATEN BANDUNG', kecamatan: 'BOJONGSOANG', kelurahan: 'BOJONGSOANG', rt: '01', rw: '04', status: 'Pending' },
@@ -19,23 +18,19 @@ const UserDashboard = () => {
         if (saved) {
             try { return JSON.parse(saved); } catch(e) {}
         }
-        // Simpan data default ke localStorage agar admin langsung bisa melihat
         localStorage.setItem('riwayatSetoran', JSON.stringify(defaultSetoran));
         return defaultSetoran;
     });
 
-    // Form State Setoran Sampah
     const [inputJenis, setInputJenis] = useState('');
     const [inputBerat, setInputBerat] = useState('');
     const [inputNominal, setInputNominal] = useState(0);
     const [isEditingSetoran, setIsEditingSetoran] = useState(false);
     const [editSetoranId, setEditSetoranId] = useState(null);
 
-    // State untuk Struk Nota Digital Pop-Up Modal
     const [showModalStruk, setShowModalStruk] = useState(false);
     const [selectedStruk, setSelectedStruk] = useState(null);
 
-    // Data Pengaduan Warga — load dari localStorage, fallback ke data default
     const defaultAduan = [
         { id: 1, provinsi: 'JAWA BARAT', kabupaten: 'KABUPATEN BANDUNG', kecamatan: 'BOJONGSOANG', kelurahan: 'BOJONGSOANG', rt: '03', rw: '04', perihal: 'Saluran air tersumbat botol plastik liar, butuh armada angkut tambahan.', status: 'Pending' }
     ];
@@ -48,10 +43,11 @@ const UserDashboard = () => {
         return defaultAduan;
     });
     
-    // Form State Pengaduan
     const [inputAduanPerihal, setInputAduanPerihal] = useState('');
     const [isEditingAduan, setIsEditingAduan] = useState(false);
     const [editAduanId, setEditAduanId] = useState(null);
+
+    const [jadwalArmada, setJadwalArmada] = useState([]);
 
     // ==================== API WILAYAH INDONESIA ENGINE ====================
     const [provinces, setProvinces] = useState([]);
@@ -59,7 +55,6 @@ const UserDashboard = () => {
     const [districts, setDistricts] = useState([]);
     const [villages, setVillages] = useState([]);
 
-    // State penampung pilihan wilayah global (dipakai bergantian oleh form yang aktif)
     const [selectedProv, setSelectedProv] = useState('');
     const [selectedKab, setSelectedKab] = useState('');
     const [selectedKec, setSelectedKec] = useState('');
@@ -67,40 +62,29 @@ const UserDashboard = () => {
     const [selectedRt, setSelectedRt] = useState('');
     const [selectedRw, setSelectedRw] = useState('');
 
-    // 3. Peta Lokasi Search State
     const [searchQuery, setSearchQuery] = useState('Indonesia');
     const [mapUrl, setMapUrl] = useState('https://maps.google.com/maps?q=bank%20sampah%20Indonesia&t=&z=5&ie=UTF8&iwloc=&output=embed');
 
-    // 4. State Poin & Voucher Reward
     const [points, setPoints] = useState(420); 
     const [rewards, setRewards] = useState([
-        { id: 1, nama: 'Voucher Token Listrik Rp 20.000', butuhPoin: 200, stok: 5, ikon: '⚡' },
-        { id: 2, nama: 'Voucher Pulsa All Operator Rp 10.000', butuhPoin: 100, stok: 12, ikon: '📱' },
-        { id: 3, nama: 'Kupon Paket Sembako Gratis RW', butuhPoin: 350, stok: 2, ikon: '🛍️' },
+        { id: 1, nama: 'Voucher Token Listrik Rp 20.000', butuhPoin: 200, stok: 5, ikon: '⚡', gradasi: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' },
+        { id: 2, nama: 'Voucher Pulsa All Operator Rp 10.000', butuhPoin: 100, stok: 12, ikon: '📱', gradasi: 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)' },
+        { id: 3, nama: 'Kupon Paket Sembako Gratis RW', butuhPoin: 350, stok: 2, ikon: '🛍️', gradasi: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)' },
     ]);
 
-    // Peringkat Sektor Kolektif Utama
-    const leaderboardRW = [
-        { peringkat: 1, rw: 'RW 01 (Kampung Hijau Asri)', berat: '452.4 Kg', poin: '9.040 Pts', badge: '🥇' },
-        { peringkat: 2, rw: 'RW 04 (Sektor Bakti Mandiri)', berat: '389.1 Kg', poin: '7.782 Pts', badge: '🥈' },
-        { peringkat: 3, rw: 'RW 02 (Indah Lestari)', berat: '210.5 Kg', poin: '4.210 Pts', badge: '🥉' },
-    ];
-
     const handleLogout = () => {
-        // Hanya hapus session user, data setoran & aduan tetap disimpan untuk admin
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         window.location.href = '/login';
     };
 
-    // Reset Dropdown Regional Bertingkat
     const resetRegionalDropdowns = () => {
         setSelectedProv(''); setSelectedKab(''); setSelectedKec(''); setSelectedKel('');
         setSelectedRt(''); setSelectedRw('');
         setRegencies([]); setDistricts([]); setVillages([]);
     };
 
-    // ==================== SIDE EFFECTS: SYNC DATA KE LOCALSTORAGE UNTUK ADMIN ====================
+    // ==================== SIDE EFFECTS: SYNC DATA LOCALSTORAGE ====================
     useEffect(() => {
         localStorage.setItem('riwayatSetoran', JSON.stringify(riwayatSetoran));
     }, [riwayatSetoran]);
@@ -109,7 +93,17 @@ const UserDashboard = () => {
         localStorage.setItem('riwayatAduan', JSON.stringify(riwayatAduan));
     }, [riwayatAduan]);
 
-    // ==================== SIDE EFFECTS: DATA WILAYAH ASLI INDONESIA ====================
+    useEffect(() => {
+        const syncData = () => {
+            setRiwayatSetoran(JSON.parse(localStorage.getItem('riwayatSetoran') || '[]'));
+            setRiwayatAduan(JSON.parse(localStorage.getItem('riwayatAduan') || '[]'));
+            setJadwalArmada(JSON.parse(localStorage.getItem('jadwalArmada') || '[]'));
+        };
+        syncData();
+        const interval = setInterval(syncData, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
             .then(res => res.json())
@@ -150,7 +144,6 @@ const UserDashboard = () => {
         }
     };
 
-    // ==================== LOGIKA SEARCH MAPS ====================
     const handleSearchMap = (e) => {
         e.preventDefault();
         if (searchQuery.trim() !== '') {
@@ -160,27 +153,18 @@ const UserDashboard = () => {
         }
     };
 
-    // ==================== KALKULASI HARGA SAMPAH OTOMATIS ====================
     const calculateAutomatedPrice = (teksKategori, nilaiBerat) => {
         const beratFloat = parseFloat(nilaiBerat);
         if (!teksKategori || isNaN(beratFloat) || beratFloat <= 0) {
             setInputNominal(0);
             return;
         }
-
         const kategoriLower = teksKategori.toLowerCase();
         let hargaPerKg = 4000;
-
-        if (kategoriLower.includes('plastik')) {
-            hargaPerKg = 5000;
-        } else if (kategoriLower.includes('kertas') || kategoriLower.includes('kardus')) {
-            hargaPerKg = 3500;
-        } else if (kategoriLower.includes('logam') || kategoriLower.includes('besi') || kategoriLower.includes('kaleng')) {
-            hargaPerKg = 12000;
-        } else if (kategoriLower.includes('kaca') || kategoriLower.includes('botol')) {
-            hargaPerKg = 2500;
-        }
-
+        if (kategoriLower.includes('plastik')) hargaPerKg = 5000;
+        else if (kategoriLower.includes('kertas') || kategoriLower.includes('kardus')) hargaPerKg = 3500;
+        else if (kategoriLower.includes('logam') || kategoriLower.includes('besi') || kategoriLower.includes('kaleng')) hargaPerKg = 12000;
+        else if (kategoriLower.includes('kaca') || kategoriLower.includes('botol')) hargaPerKg = 2500;
         setInputNominal(beratFloat * hargaPerKg);
     };
 
@@ -194,7 +178,6 @@ const UserDashboard = () => {
         calculateAutomatedPrice(inputJenis, berat);
     };
 
-    // ==================== OPERASI CRUD SAMPAH + INTEGRASI LEADERBOARD ====================
     const handleSaveSetoran = (e) => {
         e.preventDefault();
         if (isEditingSetoran) {
@@ -248,7 +231,6 @@ const UserDashboard = () => {
         setShowModalStruk(true);
     };
 
-    // ==================== OPERASI CRUD PENGADUAN + REGIONAL 100% KOMPLIT ====================
     const handleSaveAduan = (e) => {
         e.preventDefault();
         let updated;
@@ -295,7 +277,6 @@ const UserDashboard = () => {
         }
     };
 
-    // ==================== REAL-TIME LEADERBOARD WILAYAH AGREGASI ====================
     const hitungLeaderboardWilayahRealtime = () => {
         const petaWilayah = {};
         riwayatSetoran.forEach(item => {
@@ -323,7 +304,6 @@ const UserDashboard = () => {
 
     const leaderboardDinamis = hitungLeaderboardWilayahRealtime();
 
-    // REWARD POIN HANDLING
     const handleClaimReward = (reward) => {
         if (points >= reward.butuhPoin && reward.stok > 0) {
             setPoints(points - reward.butuhPoin);
@@ -339,83 +319,81 @@ const UserDashboard = () => {
     const carbonReduced = totalBerat * 2.5; 
     const treesSaved = (carbonReduced / 20).toFixed(2);
 
-    // CONFIGURATION STYLE ENGINE
+    // ==================== WOW THEME ARCHITECTURE (FIXED) ====================
     const theme = {
-        bg: darkMode ? '#0b0f19' : '#f8fafc',
-        cardBg: darkMode ? '#131c2e' : '#ffffff',
-        textMain: darkMode ? '#f8fafc' : '#0f172a',
-        textSub: darkMode ? '#94a3b8' : '#64748b',
-        border: darkMode ? 'rgba(255,255,255,0.05)' : '#e2e8f0',
-        sidebarBg: darkMode ? '#090d16' : '#0f2e1b',
-        tableRowHover: darkMode ? '#1e293b' : '#f8fafc',
+        bg: darkMode ? '#090d16' : '#f4f6fa',
+        cardBg: darkMode ? '#111827' : '#ffffff',
+        textMain: darkMode ? '#f9fafb' : '#111827',
+        textSub: darkMode ? '#9ca3af' : '#6b7280',
+        border: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+        sidebarBg: darkMode ? '#05070c' : '#0a251c',
+        tableHeader: darkMode ? '#1f2937' : '#f3f4f6',
+        inputBg: darkMode ? '#1f2937' : '#fff'
     };
 
-    
-
-    // JALUR FORM REGIONAL REUSABLE COMPONENT (Mencegah Redudansi Kode)
     const renderDropdownRegional = () => (
-        <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>Provinsi Real:</label>
-                    <select onChange={(e) => { const idx = e.target.selectedIndex; handleSelectProvinsi(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} required>
-                        <option value="">-- Pilih Provinsi Asli --</option>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain, letterSpacing: '0.3px' }}>Provinsi Utama</label>
+                    <select onChange={(e) => { const idx = e.target.selectedIndex; handleSelectProvinsi(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', transition: '0.2s', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} required>
+                        <option value="">-- Pilih Provinsi --</option>
                         {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>Kota / Kabupaten Real:</label>
-                    <select disabled={regencies.length === 0} onChange={(e) => { const idx = e.target.selectedIndex; handleSelectKabupaten(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} required>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain, letterSpacing: '0.3px' }}>Kota / Kabupaten</label>
+                    <select disabled={regencies.length === 0} onChange={(e) => { const idx = e.target.selectedIndex; handleSelectKabupaten(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', transition: '0.2s', fontSize: '14px' }} required>
                         <option value="">-- Pilih Kota / Kabupaten --</option>
                         {regencies.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                     </select>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>Kecamatan Real:</label>
-                    <select disabled={districts.length === 0} onChange={(e) => { const idx = e.target.selectedIndex; handleSelectKecamatan(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} required>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain, letterSpacing: '0.3px' }}>Kecamatan Sektor</label>
+                    <select disabled={districts.length === 0} onChange={(e) => { const idx = e.target.selectedIndex; handleSelectKecamatan(e.target.value, e.target.options[idx].text); }} style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', transition: '0.2s', fontSize: '14px' }} required>
                         <option value="">-- Pilih Kecamatan --</option>
                         {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>Kelurahan / Desa Real:</label>
-                    <select disabled={villages.length === 0} onChange={(e) => setSelectedKel(e.target.value)} value={selectedKel} style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} required>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain, letterSpacing: '0.3px' }}>Kelurahan / Kelompok Desa</label>
+                    <select disabled={villages.length === 0} onChange={(e) => setSelectedKel(e.target.value)} value={selectedKel} style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', transition: '0.2s', fontSize: '14px' }} required>
                         <option value="">-- Pilih Kelurahan / Desa --</option>
                         {villages.map(v => <option key={v.id} value={v.name}>{v.name}</option>)}
                     </select>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', maxWidth: '300px' }}>
+            <div style={{ display: 'flex', gap: '25px', maxWidth: '340px' }}>
                 <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>No. RT:</label>
-                    <input type="text" value={selectedRt} onChange={(e) => setSelectedRt(e.target.value)} placeholder="02" required style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} />
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>No. RT</label>
+                    <input type="text" value={selectedRt} onChange={(e) => setSelectedRt(e.target.value)} placeholder="e.g. 03" required style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', fontSize: '14px' }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>No. RW:</label>
-                    <input type="text" value={selectedRw} onChange={(e) => setSelectedRw(e.target.value)} placeholder="05" required style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', outline: 'none' }} />
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700', color: theme.textMain }}>No. RW</label>
+                    <input type="text" value={selectedRw} onChange={(e) => setSelectedRw(e.target.value)} placeholder="e.g. 09" required style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', fontSize: '14px' }} />
                 </div>
             </div>
-        </>
+        </div>
     );
 
     return (
-        <div style={{ margin: 0, padding: 0, fontFamily: "'Inter', system-ui, sans-serif", backgroundColor: theme.bg, color: theme.textMain, minHeight: '100vh', display: 'flex', transition: 'all 0.3s ease' }}>
+        <div style={{ margin: 0, padding: 0, fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", backgroundColor: theme.bg, color: theme.textMain, minHeight: '100vh', display: 'flex', transition: 'background-color 0.3s ease' }}>
             
             {/* SIDEBAR NAVIGATION */}
-            <aside style={{ width: '290px', backgroundColor: theme.sidebarBg, color: '#94a3b8', display: 'flex', flexDirection: 'column', boxShadow: '5px 0 25px rgba(0,0,0,0.1)', position: 'fixed', top: 0, bottom: 0, left: 0, zIndex: 100, transition: 'all 0.3s ease' }}>
-                <div style={{ padding: '35px 28px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div style={{ background: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)', padding: '10px', borderRadius: '12px', color: 'white', fontWeight: 'bold', fontSize: '22px' }}>🌱</div>
+            <aside style={{ width: '300px', backgroundColor: theme.sidebarBg, color: '#e5e7eb', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, bottom: 0, left: 0, zIndex: 100, borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ padding: '40px 30px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', width: '45px', height: '45px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', color: '#fff', fontSize: '20px' }}>🌱</div>
                     <div>
-                        <h3 style={{ margin: 0, color: 'white', fontWeight: '800', fontSize: '18px' }}>SmartCommunity</h3>
-                        <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: '700' }}>Portal Warga v3.5</span>
+                        <h3 style={{ margin: 0, color: 'white', fontWeight: '800', fontSize: '20px', letterSpacing: '-0.5px' }}>Sipesam</h3>
+                        <span style={{ fontSize: '11px', color: '#34d399', fontWeight: '700', uppercase: 'true' }}>Portal Hub v3.5</span>
                     </div>
                 </div>
 
-                <div style={{ padding: '30px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ padding: '20px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[
                         { id: 'dashboard', label: 'Dashboard Overview', icon: '📊' },
                         { id: 'riwayat', label: 'Setor Bank Sampah', icon: '⚖️' },
@@ -425,99 +403,98 @@ const UserDashboard = () => {
                         { id: 'edukasi', label: 'Katalog Pintar Pilah', icon: '📘' },
                         { id: 'pengaduan', label: 'Ajukan Pengaduan', icon: '📢' },
                     ].map((menu) => (
-                        <button key={menu.id} onClick={() => { setActiveMenu(menu.id); resetRegionalDropdowns(); }} style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', padding: '14px 20px', border: 'none', borderRadius: '12px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', textAlign: 'left', backgroundColor: activeMenu === menu.id ? '#16a34a' : 'transparent', color: activeMenu === menu.id ? 'white' : '#94a3b8', transition: 'all 0.2s' }}>
+                        <button key={menu.id} onClick={() => { setActiveMenu(menu.id); resetRegionalDropdowns(); }} style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%', padding: '14px 20px', border: 'none', borderRadius: '14px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', textAlign: 'left', backgroundColor: activeMenu === menu.id ? '#10b981' : 'transparent', color: activeMenu === menu.id ? 'white' : '#9ca3af', boxShadow: activeMenu === menu.id ? '0 4px 15px rgba(16,185,129,0.2)' : 'none', transition: 'all 0.2s ease-in-out' }}>
                             <span style={{ fontSize: '18px' }}>{menu.icon}</span> {menu.label}
                         </button>
                     ))}
                 </div>
 
-                <div style={{ padding: '24px', borderTop: '1px solid rgba(255,255,255,0.04)', backgroundColor: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{ width: '44px', height: '44px', background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800' }}>
+                <div style={{ padding: '25px', backgroundColor: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '45px', height: '45px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '16px' }}>
                         {storedUser?.name ? storedUser.name.charAt(0) : 'W'}
                     </div>
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                         <p style={{ margin: 0, color: 'white', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{storedUser?.name || 'Warga Mandiri'}</p>
-                        <span style={{ fontSize: '11px', color: '#4ade80' }}>Sektor Warga Mandiri</span>
+                        <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '600' }}>Sektor Kolektif</span>
                     </div>
                 </div>
             </aside>
 
             {/* MAIN CONTAINER */}
-            <main style={{ flex: 1, marginLeft: '290px', padding: '45px', boxSizing: 'border-box' }}>
+            <main style={{ flex: 1, marginLeft: '300px', padding: '50px 60px', boxSizing: 'border-box' }}>
                 
                 {/* NAVBAR TOP BAR */}
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', backgroundColor: theme.cardBg, padding: '24px 35px', borderRadius: '20px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 18px rgba(0,0,0,0.01)' }}>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', backgroundColor: theme.cardBg, padding: '25px 40px', borderRadius: '24px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: theme.textMain }}>
-                            {activeMenu === 'dashboard' && 'Dashboard Overview'}
-                            {activeMenu === 'riwayat' && 'Pusat Manajemen Log & Wilayah'}
+                        <h1 style={{ margin: 0, fontSize: '26px', fontWeight: '800', color: theme.textMain, letterSpacing: '-0.5px' }}>
+                            {activeMenu === 'dashboard' && 'Dashboard Center'}
+                            {activeMenu === 'riwayat' && 'Pusat Manajemen Log Sampah'}
                             {activeMenu === 'maps' && 'Peta Satelit Interaktif'}
                             {activeMenu === 'reward' && 'E-Voucher Rewards Hub'}
                             {activeMenu === 'jadwal' && 'Kalender Operasional RW'}
                             {activeMenu === 'edukasi' && 'Katalog Pemilahan Pintar'}
-                            {activeMenu === 'pengaduan' && 'Layanan Pusat Laporan Real Indonesia'}
+                            {activeMenu === 'pengaduan' && 'Layanan Pengaduan Indonesia'}
                         </h1>
-                        <p style={{ margin: '4px 0 0 0', color: theme.textSub, fontSize: '13px' }}>Manajemen Sinkronisasi Data Setoran, Aduan & Peringkat Wilayah Se-Indonesia</p>
+                        <p style={{ margin: '4px 0 0 0', color: theme.textSub, fontSize: '13px' }}>Monitoring ekosistem lingkungan pintar secara real-time</p>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <button onClick={() => setDarkMode(!darkMode)} style={{ padding: '10px 16px', backgroundColor: darkMode ? '#1e293b' : '#f1f5f9', color: darkMode ? '#eab308' : '#475569', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <button onClick={() => setDarkMode(!darkMode)} style={{ padding: '12px 20px', backgroundColor: darkMode ? '#1f2937' : '#fff', color: darkMode ? '#fbbf24' : '#4b5563', border: `1px solid ${theme.border}`, borderRadius: '14px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                             {darkMode ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
                         </button>
-                        <button onClick={handleLogout} style={{ padding: '12px 24px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Keluar</button>
+                        <button onClick={handleLogout} style={{ padding: '12px 22px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 10px rgba(239,68,68,0.2)' }}>Keluar</button>
                     </div>
                 </header>
 
                 {/* SCREEN 1: DASHBOARD */}
                 {activeMenu === 'dashboard' && (
                     <>
-                        <div style={{ background: 'linear-gradient(135deg, #15803d 0%, #052e16 100%)', padding: '40px', borderRadius: '24px', color: 'white', marginBottom: '40px', boxShadow: '0 10px 25px rgba(21,128,61,0.15)' }}>
-                            <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '800' }}>Selamat Datang Kembali, {storedUser?.name || 'Warga'}! 👋</h2>
-                            <p style={{ margin: '8px 0 0 0', opacity: 0.85 }}>Sistem rekapitulasi data kebersihan terintegrasi. Pantau ekosistem lingkungan Anda disini.</p>
+                        <div style={{ background: 'linear-gradient(135deg, #047857 0%, #064e3b 100%)', padding: '45px', borderRadius: '28px', color: 'white', marginBottom: '40px', boxShadow: '0 10px 30px rgba(4,120,87,0.2)' }}>
+                            <h2 style={{ margin: 0, fontSize: '30px', fontWeight: '800', letterSpacing: '-0.5px' }}>Selamat Datang Kembali, {storedUser?.name || 'Warga'}! 👋</h2>
+                            <p style={{ margin: '8px 0 0 0', opacity: 0.85, fontSize: '15px' }}>Rekapitulasi data kebersihan terintegrasi. Lingkungan hijau dimulai dari aksi nyata Anda.</p>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '28px', marginBottom: '40px' }}>
-                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '20px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ fontSize: '36px', backgroundColor: darkMode ? '#12251a' : '#f0fdf4', padding: '16px', borderRadius: '16px' }}>💰</div>
-                                <div><span style={{ color: theme.textSub, fontSize: '13px' }}>Buku Kas Tabungan</span><h2 style={{ margin: '6px 0 0 0', color: '#16a34a', fontWeight: '800', fontSize: '28px' }}>Rp {totalSaldo.toLocaleString('id-ID')}</h2></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px', marginBottom: '40px' }}>
+                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '24px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.01)' }}>
+                                <div style={{ fontSize: '32px', backgroundColor: darkMode ? '#064e3b' : '#e6f4ea', padding: '18px', borderRadius: '20px' }}>💰</div>
+                                <div><span style={{ color: theme.textSub, fontSize: '13px', fontWeight: '600' }}>Kas Tabungan</span><h2 style={{ margin: '4px 0 0 0', color: '#10b981', fontWeight: '800', fontSize: '26px' }}>Rp {totalSaldo.toLocaleString('id-ID')}</h2></div>
                             </div>
-                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '20px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ fontSize: '36px', backgroundColor: darkMode ? '#0f2038' : '#eff6ff', padding: '16px', borderRadius: '16px' }}>⚖️</div>
-                                <div><span style={{ color: theme.textSub, fontSize: '13px' }}>Massa Timbangan Anda</span><h2 style={{ margin: '6px 0 0 0', color: '#2563eb', fontWeight: '800', fontSize: '28px' }}>{totalBerat.toFixed(1)} Kg</h2></div>
+                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '24px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.01)' }}>
+                                <div style={{ fontSize: '32px', backgroundColor: darkMode ? '#1e3a8a' : '#eff6ff', padding: '18px', borderRadius: '20px' }}>⚖️</div>
+                                <div><span style={{ color: theme.textSub, fontSize: '13px', fontWeight: '600' }}>Total Timbangan</span><h2 style={{ margin: '4px 0 0 0', color: '#3b82f6', fontWeight: '800', fontSize: '26px' }}>{totalBerat.toFixed(1)} Kg</h2></div>
                             </div>
-                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '20px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                <div style={{ fontSize: '36px', backgroundColor: darkMode ? '#2d230a' : '#fefce8', padding: '16px', borderRadius: '16px' }}>🏆</div>
-                                <div><span style={{ color: theme.textSub, fontSize: '13px' }}>Poin Kontribusi</span><h2 style={{ margin: '6px 0 0 0', color: '#ca8a04', fontWeight: '800', fontSize: '28px' }}>{points} Pts</h2></div>
+                            <div style={{ backgroundColor: theme.cardBg, padding: '30px', borderRadius: '24px', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.01)' }}>
+                                <div style={{ fontSize: '32px', backgroundColor: darkMode ? '#78350f' : '#fefce8', padding: '18px', borderRadius: '20px' }}>🏆</div>
+                                <div><span style={{ color: theme.textSub, fontSize: '13px', fontWeight: '600' }}>Poin Kontribusi</span><h2 style={{ margin: '4px 0 0 0', color: '#f59e0b', fontWeight: '800', fontSize: '26px' }}>{points} Pts</h2></div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-                            <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}` }}>
-                                <h3 style={{ margin: '0 0 20px 0', color: theme.textMain }}>📊 Kalkulator Dampak Ekologi (Eco-Impact)</h3>
-                                <div style={{ backgroundColor: darkMode ? '#12251a' : '#f0fdf4', padding: '18px', borderRadius: '14px', marginBottom: '14px', border: darkMode ? '1px solid #16a34a' : '1px solid #bbf7d0' }}>
-                                    <h5 style={{ margin: 0, color: theme.textMain }}>Reduksi Emisi Gas CO₂</h5><h2 style={{ margin: '4px 0 0 0', color: '#16a34a', fontWeight: '900' }}>{carbonReduced.toFixed(1)} Kg</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '35px' }}>
+                            <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                                <h3 style={{ margin: '0 0 25px 0', color: theme.textMain, fontSize: '18px', fontWeight: '800' }}>📊 Kalkulator Dampak Ekologi</h3>
+                                <div style={{ backgroundColor: darkMode ? 'rgba(16,185,129,0.08)' : '#f0fdf4', padding: '20px', borderRadius: '18px', marginBottom: '16px', border: `1px solid ${darkMode ? '#064e3b' : '#bbf7d0'}` }}>
+                                    <h5 style={{ margin: 0, color: theme.textMain, fontSize: '14px', fontWeight: '600' }}>Reduksi Emisi Gas CO₂</h5><h2 style={{ margin: '6px 0 0 0', color: '#10b981', fontWeight: '900', fontSize: '32px' }}>{carbonReduced.toFixed(1)} Kg</h2>
                                 </div>
-                                <div style={{ backgroundColor: darkMode ? '#0f2038' : '#eff6ff', padding: '18px', borderRadius: '14px', border: darkMode ? '1px solid #2563eb' : '1px solid #bfdbfe' }}>
-                                    <h5 style={{ margin: 0, color: theme.textMain }}>Simulasi Pohon Hidup Diselamatkan</h5><h2 style={{ margin: '4px 0 0 0', color: '#2563eb', fontWeight: '900' }}>{treesSaved} Pohon</h2>
+                                <div style={{ backgroundColor: darkMode ? 'rgba(59,130,246,0.08)' : '#eff6ff', padding: '20px', borderRadius: '18px', border: `1px solid ${darkMode ? '#1e3a8a' : '#bfdbfe'}` }}>
+                                    <h5 style={{ margin: 0, color: theme.textMain, fontSize: '14px', fontWeight: '600' }}>Simulasi Pohon Diselamatkan</h5><h2 style={{ margin: '6px 0 0 0', color: '#3b82f6', fontWeight: '900', fontSize: '32px' }}>{treesSaved} Pohon</h2>
                                 </div>
                             </div>
 
-                            <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}` }}>
-                                <h3 style={{ margin: '0 0 4px 0', color: theme.textMain }}>🏆 Peringkat Sektor Wilayah Ter-Hijau Real-Time</h3>
-                                <p style={{ margin: '0 0 20px 0', color: theme.textSub, fontSize: '12px' }}>*Leaderboard ter-update otomatis seketika dari akumulasi form berat setoran sampah warga.</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                                <h3 style={{ margin: '0 0 4px 0', color: theme.textMain, fontSize: '18px', fontWeight: '800' }}>🏆 Peringkat Wilayah Ter-Hijau</h3>
+                                <p style={{ margin: '0 0 25px 0', color: theme.textSub, fontSize: '12px' }}>Akumulasi otomatis dari berat total setoran sampah warga</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                     {leaderboardDinamis.map((item, i) => (
-                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', backgroundColor: darkMode ? '#1a2436' : '#f8fafc', borderRadius: '12px', border: `1px solid ${theme.border}` }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                                <span style={{ fontSize: '18px', fontWeight: '900' }}>{item.badge}</span>
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: darkMode ? '#1f2937' : '#f9fafb', borderRadius: '16px', border: `1px solid ${theme.border}` }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                <span style={{ fontSize: '20px' }}>{item.badge}</span>
                                                 <div>
                                                     <span style={{ fontSize: '14px', fontWeight: '700', color: theme.textMain, display: 'block' }}>{item.wilayah}</span>
-                                                    <span style={{ fontSize: '11px', color: theme.textSub }}>{item.deskripsi}</span>
+                                                    <span style={{ fontSize: '12px', color: theme.textSub }}>{item.deskripsi}</span>
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <span style={{ fontSize: '14px', fontWeight: '800', color: '#16a34a', display: 'block' }}>{item.massa}</span>
-                                                <span style={{ fontSize: '11px', color: theme.textSub }}>{item.poin}</span>
+                                                <span style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', display: 'block' }}>{item.massa}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -530,57 +507,61 @@ const UserDashboard = () => {
                 {/* SCREEN 2: SETOR BANK SAMPAH */}
                 {activeMenu === 'riwayat' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                        <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}` }}>
-                            <h3 style={{ color: theme.textMain, marginBottom: '20px' }}>{isEditingSetoran ? '📝 Edit Berkas Setoran Timbangan' : '➕ Input Pembukuan Setoran & Validasi Wilayah'}</h3>
-                            <form onSubmit={handleSaveSetoran} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: 2, minWidth: '260px' }}>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain }}>Kategori Material (Ketik Bebas):</label>
-                                        <input type="text" value={inputJenis} onChange={(e) => handleJenisTxtChange(e.target.value)} placeholder="Contoh: Plastik HDPE, Kardus Box..." required style={{ width: '100%', padding: '14px', border: `2px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '12px', outline: 'none' }} />
+                        <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                            <h3 style={{ color: theme.textMain, marginBottom: '25px', fontSize: '18px', fontWeight: '800' }}>{isEditingSetoran ? '📝 Edit Berkas Setoran Timbangan' : '➕ Input Pembukuan Setoran & Validasi'}</h3>
+                            <form onSubmit={handleSaveSetoran} style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                                <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: 2, minWidth: '280px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain, fontSize: '13px' }}>Kategori Material (Ketik Bebas)</label>
+                                        <input type="text" value={inputJenis} onChange={(e) => handleJenisTxtChange(e.target.value)} placeholder="Contoh: Plastik HDPE, Kardus Box..." required style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', fontSize: '14px' }} />
                                     </div>
-                                    <div style={{ width: '150px' }}>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain }}>Berat (Kg):</label>
-                                        <input type="number" step="0.1" value={inputBerat} onChange={(e) => handleBeratTxtChange(e.target.value)} placeholder="0.0" required style={{ width: '100%', padding: '14px', border: `2px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '12px', outline: 'none' }} />
+                                    <div style={{ width: '160px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain, fontSize: '13px' }}>Berat (Kg)</label>
+                                        <input type="number" step="0.1" value={inputBerat} onChange={(e) => handleBeratTxtChange(e.target.value)} placeholder="0.0" required style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', fontSize: '14px' }} />
                                     </div>
-                                    <div style={{ width: '220px' }}>
-                                        <label style={{ display: 'block', marginBottom: '8px', color: '#16a34a', fontWeight: '700' }}>Nominal Rupiah Cair:</label>
-                                        <div style={{ padding: '14px', border: '2px solid #22c55e', backgroundColor: darkMode ? '#12251a' : '#f0fdf4', color: '#16a34a', fontWeight: '800', borderRadius: '12px' }}>Rp {inputNominal.toLocaleString('id-ID')}</div>
+                                    <div style={{ width: '240px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', color: '#10b981', fontWeight: '700', fontSize: '13px' }}>Nominal Rupiah Cair</label>
+                                        <div style={{ padding: '14px', border: '1px solid #10b981', backgroundColor: darkMode ? 'rgba(16,185,129,0.05)' : '#e6f4ea', color: '#059669', fontWeight: '800', borderRadius: '12px', fontSize: '15px' }}>Rp {inputNominal.toLocaleString('id-ID')}</div>
                                     </div>
                                 </div>
 
-                                {/* Pemanggilan Form Peta Regional Bertingkat */}
                                 {renderDropdownRegional()}
 
-                                <button type="submit" style={{ padding: '16px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '15px', cursor: 'pointer' }}>
-                                    Submit Timbangan & Kalkulasi Real-Time
+                                <button type="submit" style={{ padding: '16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', transition: '0.2s' }}>
+                                    Submit Berkas Timbangan
                                 </button>
                             </form>
                         </div>
 
                         {/* TABEL LOG */}
-                        <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}` }}>
-                            <h3 style={{ color: theme.textMain, marginBottom: '24px' }}>Log Arsip Rekapitulasi Timbangan Warga</h3>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)', overflowX: 'auto' }}>
+                            <h3 style={{ color: theme.textMain, marginBottom: '25px', fontSize: '18px', fontWeight: '800' }}>Log Arsip Rekapitulasi Warga</h3>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
                                 <thead>
-                                    <tr style={{ backgroundColor: darkMode ? '#1e293b' : '#f8fafc', borderBottom: `2px solid ${theme.border}`, color: theme.textMain }}>
-                                        <th style={{ padding: '18px' }}>Tanggal</th><th style={{ padding: '18px' }}>Kategori</th><th style={{ padding: '18px' }}>Sektor Wilayah Real</th><th style={{ padding: '18px' }}>Berat Bersih</th><th style={{ padding: '18px' }}>Nilai Cair</th><th style={{ padding: '18px', textAlign: 'center' }}>Operasi</th>
+                                    <tr style={{ backgroundColor: theme.tableHeader, borderBottom: `1px solid ${theme.border}`, color: theme.textMain }}>
+                                        <th style={{ padding: '18px', borderRadius: '12px 0 0 12px' }}>Tanggal</th>
+                                        <th style={{ padding: '18px' }}>Kategori</th>
+                                        <th style={{ padding: '18px' }}>Sektor Wilayah</th>
+                                        <th style={{ padding: '18px' }}>Berat Bersih</th>
+                                        <th style={{ padding: '18px' }}>Nilai Cair</th>
+                                        <th style={{ padding: '18px', textAlign: 'center', borderRadius: '0 12px 12px 0' }}>Operasi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {riwayatSetoran.map((item) => (
-                                        <tr key={item.id} style={{ borderBottom: `1px solid ${theme.border}`, color: theme.textMain }} onMouseOver={(e)=>e.currentTarget.style.backgroundColor=theme.tableRowHover} onMouseOut={(e)=>e.currentTarget.style.backgroundColor='transparent'}>
-                                            <td style={{ padding: '18px', color: theme.textSub }}>{item.tanggal}</td>
-                                            <td style={{ padding: '18px', fontWeight: 'bold' }}>{item.jenis}</td>
+                                        <tr key={item.id} style={{ borderBottom: `1px solid ${theme.border}`, color: theme.textMain, transition: 'background-color 0.2s' }} onMouseOver={(e)=>e.currentTarget.style.backgroundColor=darkMode ? '#1f2937' : '#f9fafb'} onMouseOut={(e)=>e.currentTarget.style.backgroundColor='transparent'}>
+                                            <td style={{ padding: '18px', color: theme.textSub, fontSize: '13px' }}>{item.tanggal}</td>
+                                            <td style={{ padding: '18px', fontWeight: '700' }}>{item.jenis}</td>
                                             <td style={{ padding: '18px', fontSize: '13px' }}>
-                                                <span style={{ fontWeight: '600', display: 'block' }}>{item.kelurahan} (RT {item.rt}/RW {item.rw})</span>
+                                                <span style={{ fontWeight: '700', display: 'block' }}>{item.kelurahan} (RT {item.rt}/RW {item.rw})</span>
                                                 <span style={{ color: theme.textSub, fontSize: '11px' }}>{item.kecamatan}, {item.kabupaten}</span>
                                             </td>
-                                            <td style={{ padding: '18px' }}>{item.berat} Kg</td>
-                                            <td style={{ padding: '18px', color: '#16a34a', fontWeight: 'bold' }}>Rp {item.pendapatan.toLocaleString('id-ID')}</td>
-                                            <td style={{ padding: '18px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                <button onClick={() => handleTriggerStruk(item)} style={{ padding: '6px 12px', backgroundColor: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>🧾 Struk</button>
-                                                <button onClick={() => handleEditSetoran(item)} style={{ padding: '6px 12px', backgroundColor: '#fef3c7', color: '#d97706', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Ubah</button>
-                                                <button onClick={() => handleDeleteSetoran(item.id)} style={{ padding: '6px 12px', backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Hapus</button>
+                                            <td style={{ padding: '18px', fontWeight: '600' }}>{item.berat} Kg</td>
+                                            <td style={{ padding: '18px', color: '#10b981', fontWeight: '700' }}>Rp {item.pendapatan.toLocaleString('id-ID')}</td>
+                                            <td style={{ padding: '18px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                                <button onClick={() => handleTriggerStruk(item)} style={{ padding: '8px 14px', backgroundColor: darkMode ? '#1e3a8a' : '#e0f2fe', color: '#2563eb', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>🧾 Struk</button>
+                                                <button onClick={() => handleEditSetoran(item)} style={{ padding: '8px 14px', backgroundColor: darkMode ? '#78350f' : '#fef3c7', color: '#d97706', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Ubah</button>
+                                                <button onClick={() => handleDeleteSetoran(item.id)} style={{ padding: '8px 14px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>Hapus</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -592,48 +573,92 @@ const UserDashboard = () => {
 
                 {/* SCREEN 3: MAPS */}
                 {activeMenu === 'maps' && (
-                    <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}` }}>
-                        <form onSubmit={handleSearchMap} style={{ display: 'flex', gap: '14px', marginBottom: '28px' }}>
-                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Ketik wilayah penelusuran peta..." style={{ flex: 1, padding: '14px', border: `2px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '12px', outline: 'none' }} />
-                            <button type="submit" style={{ padding: '14px 28px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700' }}>Cari Peta</button>
+                    <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                        <form onSubmit={handleSearchMap} style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
+                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Ketik wilayah penelusuran peta..." style={{ flex: 1, padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', outline: 'none', fontSize: '14px' }} />
+                            <button type="submit" style={{ padding: '14px 28px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 10px rgba(16,185,129,0.2)' }}>Cari Peta</button>
                         </form>
-                        <iframe title="Maps" src={mapUrl} width="100%" height="520px" style={{ border: 0, borderRadius: '16px', filter: darkMode ? 'invert(90%) hue-rotate(180deg)' : 'none' }}></iframe>
+                        <iframe title="Maps" src={mapUrl} width="100%" height="520px" style={{ border: 0, borderRadius: '20px', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)', filter: darkMode ? 'invert(90%) hue-rotate(180deg)' : 'none' }}></iframe>
                     </div>
                 )}
 
                 {/* SCREEN 4: REWARD */}
                 {activeMenu === 'reward' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
                         {rewards.map(r => (
-                            <div key={r.id} style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}`, textAlign: 'center' }}>
-                                <div style={{ fontSize: '48px' }}>{r.ikon}</div><h4 style={{ color: theme.textMain }}>{r.nama}</h4><p style={{ color: '#16a34a', fontWeight: 'bold', fontSize: '20px' }}>{r.butuhPoin} Pts</p>
-                                <button onClick={() => handleClaimReward(r)} style={{ width: '100%', padding: '12px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Klaim Hadiah</button>
+                            <div key={r.id} style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.01)', transition: 'transform 0.2s' }}>
+                                <div style={{ background: r.gradasi, width: '80px', height: '80px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 20px auto', boxShadow: '0 8px 20px rgba(0,0,0,0.1)' }}>{r.ikon}</div>
+                                <h4 style={{ color: theme.textMain, margin: '0 0 10px 0', fontSize: '16px', fontWeight: '800' }}>{r.nama}</h4>
+                                <p style={{ color: '#10b981', fontWeight: '900', fontSize: '22px', margin: '0 0 25px 0' }}>{r.butuhPoin} <span style={{ fontSize: '14px', fontWeight: '600', color: theme.textSub }}>Pts</span></p>
+                                <button onClick={() => handleClaimReward(r)} style={{ width: '100%', padding: '14px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 10px rgba(16,185,129,0.2)' }}>Klaim Voucher</button>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* SCREEN 5 & 6 */}
-                {activeMenu === 'jadwal' && <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}`, color: theme.textMain }}><h3>🗓 JADWAL OPERASIONAL TRUK RW</h3><p style={{ color: theme.textSub }}>Senin 07.00 WIB: Sampah Basah Organik Dapur</p><p style={{ color: theme.textSub }}>Rabu 09.30 WIB: Klaster Penjemputan Timbangan Depot Pusat</p></div>}
-                {activeMenu === 'edukasi' && <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}`, color: theme.textMain }}><h3>📘 CATALOG PINTAR KLASIFIKASI</h3><p style={{ color: '#16a34a' }}><b>Bernilai Ekonomis:</b> Plastik Kemasan PET, Kardus Box Cokelat, Besi Tua, Alumunium Kaleng</p><p style={{ color: '#ef4444' }}><b>Residu B3 Ditolak:</b> Jarum Suntik Medis, Masker Bekas, Neon Pijar, Wadah Styrofoam</p></div>}
+                {/* SCREEN 5: JADWAL */}
+                {activeMenu === 'jadwal' && (
+                    <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, color: theme.textMain, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                        <h3 style={{ marginBottom: '25px', fontSize: '18px', fontWeight: '800' }}>🗓 Kalender Operasional Truk RW</h3>
+                        
+                        <div style={{ marginBottom: '35px', paddingBottom: '20px', borderBottom: `1px dashed ${theme.border}` }}>
+                            <p style={{ color: '#10b981', fontWeight: '800', margin: '0 0 12px 0', fontSize: '14px' }}>Jadwal Tetap Wilayah:</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <p style={{ color: theme.textSub, margin: 0, fontSize: '14px' }}>• **Senin 07.00 WIB:** Sampah Basah Organik Dapur</p>
+                                <p style={{ color: theme.textSub, margin: 0, fontSize: '14px' }}>• **Rabu 09.30 WIB:** Klaster Penjemputan Timbangan Depot Pusat</p>
+                            </div>
+                        </div>
 
-                {/* ==================== SCREEN 7: AJUKAN PENGADUAN (KOMPLIT LOKASI ASLI INDONESIA) ==================== */}
+                        <p style={{ color: '#10b981', fontWeight: '800', marginBottom: '15px', fontSize: '14px' }}>Jadwal Armada Tambahan (Input Admin):</p>
+                        {jadwalArmada.length === 0 ? (
+                            <p style={{ color: theme.textSub, fontStyle: 'italic', fontSize: '13px' }}>Belum ada jadwal operasional tambahan dari administrator.</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {jadwalArmada.map(j => (
+                                    <div key={j.id} style={{ padding: '18px 25px', border: `1px solid ${theme.border}`, backgroundColor: darkMode ? '#1f2937' : '#f9fafb', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '16px' }}>📅</span> <span style={{ fontSize: '14px', fontWeight: '600' }}>Hari: {j.hari}</span> 
+                                        <span style={{ color: theme.border, margin: '0 10px' }}>|</span>
+                                        <span style={{ fontSize: '16px' }}>🕒</span> <span style={{ fontSize: '14px', fontWeight: '600' }}>Jam: {j.jam}</span> 
+                                        <span style={{ color: theme.border, margin: '0 10px' }}>|</span>
+                                        <span style={{ fontSize: '16px' }}>📍</span> <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>Lokasi: RW {j.lokasi}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {/* SCREEN 6: EDUKASI */}
+                {activeMenu === 'edukasi' && (
+                    <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, color: theme.textMain, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                        <h3 style={{ marginBottom: '25px', fontSize: '18px', fontWeight: '800' }}>📘 Katalog Pemilahan Pintar</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                            <div style={{ padding: '25px', backgroundColor: darkMode ? 'rgba(16,185,129,0.05)' : '#f0fdf4', border: '1px solid #10b981', borderRadius: '20px' }}>
+                                <h4 style={{ color: '#059669', margin: '0 0 12px 0', fontWeight: '800' }}>✅ Bernilai Ekonomis</h4>
+                                <p style={{ color: theme.textMain, margin: 0, fontSize: '14px', lineHeight: '1.6' }}>Plastik Kemasan PET, Kardus Box Cokelat, Besi Tua, Aluminium Kaleng minuman soda, botol kaca sirup.</p>
+                            </div>
+                            <div style={{ padding: '25px', backgroundColor: 'rgba(239,68,68,0.05)', border: '1px solid #ef4444', borderRadius: '20px' }}>
+                                <h4 style={{ color: '#dc2626', margin: '0 0 12px 0', fontWeight: '800' }}>❌ Residu B3 Ditolak</h4>
+                                <p style={{ color: theme.textMain, margin: 0, fontSize: '14px', lineHeight: '1.6' }}>Jarum Suntik Medis, Masker Bekas pakai, Lampu Neon Pijar pecah, wadah Styrofoam kotor bekas makanan.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* SCREEN 7: COMPLAINT */}
                 {activeMenu === 'pengaduan' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '35px', alignItems: 'flex-start' }}>
-                        <div style={{ backgroundColor: theme.cardBg, padding: '35px', borderRadius: '24px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 10px rgba(0,0,0,0.005)' }}>
-                            <h3 style={{ margin: '0 0 20px 0', color: theme.textMain, fontWeight: '800' }}>
-                                {isEditingAduan ? '📝 Koreksi Berkas Pengaduan Sektor' : '📢 Form Aduan Wilayah Real Indonesia 100%'}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'flex-start' }}>
+                        <div style={{ backgroundColor: theme.cardBg, padding: '40px', borderRadius: '28px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.01)' }}>
+                            <h3 style={{ margin: '0 0 25px 0', color: theme.textMain, fontWeight: '800', fontSize: '18px' }}>
+                                {isEditingAduan ? '📝 Koreksi Berkas Laporan Sektor' : '📢 Form Hub Laporan Kendala Wilayah'}
                             </h3>
-                            <form onSubmit={handleSaveAduan} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                
-                                {/* Pemanggilan Form Dropdown Bertingkat Reusable */}
+                            <form onSubmit={handleSaveAduan} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 {renderDropdownRegional()}
-
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain }}>Rincian Laporan Kendala:</label>
-                                    <textarea rows="4" value={inputAduanPerihal} onChange={(e) => setInputAduanPerihal(e.target.value)} placeholder="Ceritakan penumpukan limbah liar atau penyumbatan gorong-gorong secara mendalam..." required style={{ width: '100%', padding: '12px', border: `1px solid ${darkMode ? '#334155' : '#cbd5e1'}`, backgroundColor: theme.bg, color: theme.textMain, borderRadius: '8px', resize: 'none', outline: 'none' }}></textarea>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: theme.textMain, fontSize: '13px' }}>Rincian Kendala Lapangan</label>
+                                    <textarea rows="4" value={inputAduanPerihal} onChange={(e) => setInputAduanPerihal(e.target.value)} placeholder="Ceritakan penumpukan limbah liar atau penyumbatan gorong-gorong..." required style={{ width: '100%', padding: '14px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textMain, borderRadius: '12px', resize: 'none', outline: 'none', fontSize: '14px' }}></textarea>
                                 </div>
-                                <button type="submit" style={{ padding: '14px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                                <button type="submit" style={{ padding: '16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
                                     {isEditingAduan ? 'Simpan Pembaruan Aduan' : 'Kirim Laporan Resmi'}
                                 </button>
                             </form>
@@ -641,22 +666,21 @@ const UserDashboard = () => {
 
                         {/* ARSIP DOKUMEN ADUAN */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <h3 style={{ margin: 0, color: theme.textMain, fontWeight: '800' }}>Arsip Pengaduan Berkas Terkirim</h3>
+                            <h3 style={{ margin: 0, color: theme.textMain, fontWeight: '800', fontSize: '18px' }}>Arsip Pengaduan Terkirim</h3>
                             {riwayatAduan.map(a => (
-                                <div key={a.id} style={{ backgroundColor: theme.cardBg, padding: '24px', borderRadius: '16px', border: `1px solid ${theme.border}` }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                                        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>DOC-ID #{a.id.toString().slice(-5)}</span>
-                                        <span style={{ backgroundColor: '#ffedd5', color: '#c2410c', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{a.status}</span>
+                                <div key={a.id} style={{ backgroundColor: theme.cardBg, padding: '25px', borderRadius: '24px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 15px rgba(0,0,0,0.005)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <span style={{ fontSize: '11px', color: theme.textSub, fontWeight: '700' }}>DOC-ID #{a.id.toString().slice(-5)}</span>
+                                        <span style={{ backgroundColor: darkMode ? '#7c2d12' : '#ffedd5', color: '#c2410c', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{a.status}</span>
                                     </div>
-                                    <div style={{ fontSize: '13px', color: theme.textMain, display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px', backgroundColor: darkMode ? '#1e293b' : '#f8fafc', padding: '12px', borderRadius: '8px', border: `1px solid ${theme.border}` }}>
-                                        <p style={{ margin: 0 }}><b>Wilayah Real:</b> {a.kelurahan} (RT {a.rt} / RW {a.rw})</p>
-                                        <p style={{ margin: 0 }}><b>Kec/Kab:</b> {a.kecamatan}, {a.kabupaten}</p>
-                                        <p style={{ margin: 0, color: theme.textSub }}><b>Provinsi:</b> {a.provinsi}</p>
+                                    <div style={{ fontSize: '13px', color: theme.textMain, display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px', backgroundColor: theme.tableHeader, padding: '14px', borderRadius: '14px', border: `1px solid ${theme.border}` }}>
+                                        <p style={{ margin: 0 }}><b>📍 Sektor:</b> {a.kelurahan} (RT {a.rt} / RW {a.rw})</p>
+                                        <p style={{ margin: 0, color: theme.textSub }}><b>🏙️ Kec/Kab:</b> {a.kecamatan}, {a.kabupaten}</p>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: '13px', color: theme.textSub, fontStyle: 'italic' }}>"{a.perihal}"</p>
-                                    <div style={{ display: 'flex', gap: '10px', borderTop: `1px solid ${theme.border}`, paddingTop: '16px', marginTop: '14px' }}>
-                                        <button onClick={() => handleEditAduan(a)} style={{ padding: '6px 14px', backgroundColor: '#fef3c7', color: '#d97706', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Ubah</button>
-                                        <button onClick={() => handleDeleteAduan(a.id)} style={{ padding: '6px 14px', backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Hapus</button>
+                                    <p style={{ margin: 0, fontSize: '13px', color: theme.textSub, fontStyle: 'italic', lineHeight: '1.5' }}>"{a.perihal}"</p>
+                                    <div style={{ display: 'flex', gap: '10px', borderTop: `1px solid ${theme.border}`, paddingTop: '15px', marginTop: '15px' }}>
+                                        <button onClick={() => handleEditAduan(a)} style={{ padding: '8px 14px', backgroundColor: darkMode ? '#78350f' : '#fef3c7', color: '#d97706', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Ubah</button>
+                                        <button onClick={() => handleDeleteAduan(a.id)} style={{ padding: '8px 14px', backgroundColor: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Hapus</button>
                                     </div>
                                 </div>
                             ))}
@@ -665,30 +689,30 @@ const UserDashboard = () => {
                 )}
 
                 {/* FOOTER */}
-                <footer style={{ marginTop: '80px', borderTop: `1px solid ${theme.border}`, padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px', fontWeight: '500' }}>
-                    <p style={{ margin: 0 }}>Proyek Aplikasi UTS Praktikum Sistem Informasi Manajemen Kelurahan — Selesai Sempurna</p>
-                    <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#16a34a' }}>Secure System Architecture Connected to Laragon Core Daemon Node</p>
+                <footer style={{ marginTop: '80px', borderTop: `1px solid ${theme.border}`, padding: '30px 0', textAlign: 'center', color: '#9ca3af', fontSize: '13px', fontWeight: '500' }}>
+                    <p style={{ margin: 0 }}>Proyek Aplikasi UTS Praktikum Sistem Informasi Manajemen Kelurahan</p>
+                    <p style={{ margin: '4px 0 0 0', fontWeight: '700', color: '#10b981' }}>Secure Cloud Architecture Connected to Local Node</p>
                 </footer>
 
             </main>
 
             {/* MODAL STRUK */}
             {showModalStruk && selectedStruk && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ backgroundColor: 'white', padding: '35px', borderRadius: '24px', width: '380px', fontFamily: "'Courier New', Courier, monospace", color: '#000', border: '2px dashed #000' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px dashed #000', paddingBottom: '15px' }}>
-                            <h3 style={{ margin: 0, fontWeight: '900' }}>BANK SAMPAH DIGITAL</h3>
-                            <p style={{ margin: 0, fontSize: '12px' }}>STRUK ID: #STK-{selectedStruk.id.toString().slice(-6)}</p>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(5px)' }}>
+                    <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '28px', width: '390px', fontFamily: "'Courier New', Courier, monospace", color: '#111827', border: '2px dashed #111827', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px dashed #111827', paddingBottom: '15px' }}>
+                            <h3 style={{ margin: 0, fontWeight: '900', fontSize: '18px', letterSpacing: '-0.5px' }}>BANK SAMPAH DIGITAL</h3>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>STRUK ID: #STK-{selectedStruk.id.toString().slice(-6)}</p>
                         </div>
-                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tanggal:</span> <span>{selectedStruk.tanggal}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Wilayah Sektor:</span> <span>{selectedStruk.kelurahan}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>RT / RW:</span> <span>RT {selectedStruk.rt} / RW {selectedStruk.rw}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kategori:</span> <span style={{ fontWeight: 'bold' }}>{selectedStruk.jenis}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Berat Bersih:</span> <span style={{ fontWeight: 'bold' }}>{selectedStruk.berat} Kg</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px dashed #000', paddingTop: '10px', fontSize: '15px', fontWeight: 'bold' }}><span>TOTAL CAIR:</span> <span>Rp {selectedStruk.pendapatan.toLocaleString('id-ID')}</span></div>
+                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '25px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tanggal:</span> <span style={{ fontWeight: '700' }}>{selectedStruk.tanggal}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Sektor:</span> <span style={{ fontWeight: '700' }}>{selectedStruk.kelurahan}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>RT / RW:</span> <span style={{ fontWeight: '700' }}>RT {selectedStruk.rt} / RW {selectedStruk.rw}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Kategori:</span> <span style={{ fontWeight: '900' }}>{selectedStruk.jenis}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Berat Bersih:</span> <span style={{ fontWeight: '900', color: '#2563eb' }}>{selectedStruk.berat} Kg</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px dashed #111827', paddingTop: '12px', fontSize: '16px', fontWeight: '900' }}><span>TOTAL CAIR:</span> <span style={{ color: '#10b981' }}>Rp {selectedStruk.pendapatan.toLocaleString('id-ID')}</span></div>
                         </div>
-                        <button onClick={() => setShowModalStruk(false)} style={{ width: '100%', padding: '12px', backgroundColor: '#000', color: 'white', border: 'none', borderRadius: '12px', fontFamily: 'sans-serif', fontWeight: '700' }}>Tutup Salinan Nota</button>
+                        <button onClick={() => setShowModalStruk(false)} style={{ width: '100%', padding: '14px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '12px', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: '700', cursor: 'pointer' }}>Tutup Nota</button>
                     </div>
                 </div>
             )}

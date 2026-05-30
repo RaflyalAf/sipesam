@@ -14,7 +14,15 @@ const AdminDashboard = () => {
     useEffect(() => {
         const syncData = () => {
             setDataSetoran(JSON.parse(localStorage.getItem('riwayatSetoran') || '[]'));
-            setDataAduan(JSON.parse(localStorage.getItem('riwayatAduan') || '[]'));
+            
+            // PERBAIKAN: Berikan fallback ID unik jika data aduan dari Warga belum memiliki ID
+            const aduanRaw = JSON.parse(localStorage.getItem('riwayatAduan') || '[]');
+            const aduanValidated = aduanRaw.map((item, index) => ({
+                ...item,
+                id: item.id || `aduan-auto-${index}`
+            }));
+            setDataAduan(aduanValidated);
+            
             setJadwalArmada(JSON.parse(localStorage.getItem('jadwalArmada') || '[]'));
         };
         syncData();
@@ -59,6 +67,9 @@ const AdminDashboard = () => {
         border: 'none', width: '100%', fontSize: '15px', fontWeight: '600'
     };
 
+    // PERBAIKAN: Filter aduan yang masuk di badge agar hanya menghitung aduan yang belum diproses (Pending)
+    const aduanPending = dataAduan.filter(a => !a.status || a.status === 'Pending');
+
     return (
         <div style={{ backgroundColor: theme.bg, minHeight: '100vh', color: theme.text, display: 'flex', fontFamily: "'Inter', sans-serif" }}>
             {/* Sidebar */}
@@ -67,7 +78,7 @@ const AdminDashboard = () => {
                 {[
                     { id: 'overview', label: 'Overview', icon: '📊' },
                     { id: 'verifikasi', label: 'Validasi Sampah', icon: '✅' },
-                    { id: 'aduan', label: 'Inbox Aduan', icon: '📢', badge: dataAduan.length },
+                    { id: 'aduan', label: 'Inbox Aduan', icon: '📢', badge: aduanPending.length }, // Menggunakan panjang aduanPending
                     { id: 'jadwal', label: 'Jadwal Armada', icon: '🗓️' },
                     { id: 'wilayah', label: 'Data Nasional', icon: '🌐' }
                 ].map(tab => (
@@ -135,14 +146,19 @@ const AdminDashboard = () => {
 
                 {activeTab === 'aduan' && (
                     <div style={{ display: 'grid', gap: '20px' }}>
-                        {dataAduan.map((a, i) => (
-                            <div key={i} style={{ padding: '24px', background: theme.card, borderRadius: '20px', border: `1px solid ${theme.border}` }}>
-                                <h4>Aduan: {a.kelurahan} (RT{a.rt}/RW{a.rw}) - Status: {a.status}</h4>
-                                <p style={{ color: '#94a3b8' }}>{a.perihal}</p>
-                                <button onClick={() => handleAduanStatus(a.id, 'Diterima')} style={{ background: '#10b981', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', marginRight: '10px', cursor: 'pointer' }}>Terima</button>
-                                <button onClick={() => handleAduanStatus(a.id, 'Ditolak')} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer' }}>Tolak</button>
-                            </div>
-                        ))}
+                        {/* PERBAIKAN: Menggunakan aduanPending agar aduan yang sudah di-approve/reject langsung hilang dari list */}
+                        {aduanPending.length === 0 ? (
+                            <p style={{ color: '#94a3b8' }}>Tidak ada aduan pending.</p>
+                        ) : (
+                            aduanPending.map((a) => (
+                                <div key={a.id} style={{ padding: '24px', background: theme.card, borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                                    <h4>Aduan: {a.kelurahan} (RT{a.rt}/RW{a.rw}) - <span style={{ color: '#f59e0b' }}>Status: {a.status || 'Pending'}</span></h4>
+                                    <p style={{ color: '#94a3b8', margin: '10px 0' }}>{a.perihal}</p>
+                                    <button onClick={() => handleAduanStatus(a.id, 'Diterima')} style={{ background: '#10b981', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', marginRight: '10px', cursor: 'pointer' }}>Terima</button>
+                                    <button onClick={() => handleAduanStatus(a.id, 'Ditolak')} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer' }}>Tolak</button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 )}
 
@@ -150,10 +166,10 @@ const AdminDashboard = () => {
                     <div style={{ padding: '30px', background: theme.card, borderRadius: '24px', border: `1px solid ${theme.border}` }}>
                         <h3>Tambah Jadwal Armada</h3>
                         <form onSubmit={tambahJadwal} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                            <input placeholder="Hari" value={newJadwal.hari} onChange={e => setNewJadwal({...newJadwal, hari: e.target.value})} style={{ padding: '10px', borderRadius: '8px' }} />
-                            <input placeholder="Jam" value={newJadwal.jam} onChange={e => setNewJadwal({...newJadwal, jam: e.target.value})} style={{ padding: '10px', borderRadius: '8px' }} />
-                            <input placeholder="Lokasi (RW)" value={newJadwal.lokasi} onChange={e => setNewJadwal({...newJadwal, lokasi: e.target.value})} style={{ padding: '10px', borderRadius: '8px' }} />
-                            <button type="submit" style={{ background: theme.accent, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px' }}>Tambah</button>
+                            <input placeholder="Hari" required value={newJadwal.hari} onChange={e => setNewJadwal({...newJadwal, hari: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${theme.border}`, background: darkMode ? '#0f172a' : '#fff', color: theme.text }} />
+                            <input placeholder="Jam" required value={newJadwal.jam} onChange={e => setNewJadwal({...newJadwal, jam: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${theme.border}`, background: darkMode ? '#0f172a' : '#fff', color: theme.text }} />
+                            <input placeholder="Lokasi (RW)" required value={newJadwal.lokasi} onChange={e => setNewJadwal({...newJadwal, lokasi: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${theme.border}`, background: darkMode ? '#0f172a' : '#fff', color: theme.text }} />
+                            <button type="submit" style={{ background: theme.accent, color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Tambah</button>
                         </form>
                         {jadwalArmada.map(j => (
                             <div key={j.id} style={{ padding: '15px', border: '1px solid #475569', marginTop: '10px', borderRadius: '8px' }}>{j.hari} | {j.jam} | {j.lokasi}</div>
